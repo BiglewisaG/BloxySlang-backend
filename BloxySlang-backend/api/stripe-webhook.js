@@ -8,6 +8,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -18,8 +24,10 @@ module.exports = async (req, res) => {
   let event;
 
   try {
+    const buf = await buffer(req); // 👈 IMPORTANT
+
     event = stripe.webhooks.constructEvent(
-      req.body,
+      buf,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
@@ -45,3 +53,6 @@ module.exports = async (req, res) => {
 
   res.json({ success: true });
 };
+
+// helper
+const { buffer } = require("micro");

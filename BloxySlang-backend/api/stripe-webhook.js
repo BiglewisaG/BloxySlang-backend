@@ -8,12 +8,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -24,7 +18,10 @@ module.exports = async (req, res) => {
   let event;
 
   try {
-    const buf = await buffer(req); // 👈 IMPORTANT
+    // IMPORTANT FIX: use raw body from Vercel
+    const buf = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(req.body));
 
     event = stripe.webhooks.constructEvent(
       buf,
@@ -32,6 +29,7 @@ module.exports = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
+    console.log("Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -53,6 +51,3 @@ module.exports = async (req, res) => {
 
   res.json({ success: true });
 };
-
-// helper
-const { buffer } = require("micro");
